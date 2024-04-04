@@ -24,7 +24,11 @@ password      = os.getenv("STRAVA_AUTH_PASSWORD")
 client_id     = os.getenv("STRAVA_AUTH_CLIENT_ID")
 client_secret = os.getenv("STRAVA_AUTH_CLIENT_SECRET")
 
-access_token, athlete = authorize(email, password, client_id, client_secret, verbose=True)
+access_token, athlete = authorize(email, password, client_id, client_secret, verbose=False)
+
+if access_token is None or athlete is None:
+  # could not authenticate, set verbose to True to get more info
+  exit(0)
 
 # can now start calling the strava api
 headers = {
