@@ -1,4 +1,8 @@
 from setuptools import setup
 
+
 if __name__ == "__main__":
-  setup()
+  with open("./README.md", "r") as f:
+    long_description = f.read()
+
+  setup(long_description=long_description)

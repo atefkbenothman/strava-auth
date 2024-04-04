@@ -1,7 +1,4 @@
-from typing import Optional
-
-
-def authorize() -> tuple[Optional[str], Optional[dict]]:
+def authorize() -> tuple[str | None, dict | None]:
   """
   Complete the enitre Strava OAuth2 flow.
   """
