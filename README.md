@@ -1,8 +1,8 @@
 # Strava-Auth
 
-**Disclaimer: For personal use only!**
-
 Streamline the Strava OAuth2 flow with Selenium, allowing developers to quickly and easily integrate Strava's API into their applications.
+
+**Disclaimer:** For personal use only!
 
 
 ## How does it work?
