@@ -22,31 +22,44 @@ pip install -i https://test.pypi.org/simple/ strava-auth
 
 ## Example
 ```python
-from strava_auth.auth import authorize
+import os
 
-email         = os.getenv("STRAVA_AUTH_EMAIL")
-password      = os.getenv("STRAVA_AUTH_PASSWORD")
-client_id     = os.getenv("STRAVA_AUTH_CLIENT_ID")
+import requests
+from dotenv import load_dotenv
+
+from strava_auth.auth import StravaAuthenticator
+
+# Setup environment variables
+load_dotenv()
+
+email = os.getenv("STRAVA_AUTH_EMAIL")
+password = os.getenv("STRAVA_AUTH_PASSWORD")
+client_id = os.getenv("STRAVA_AUTH_CLIENT_ID")
 client_secret = os.getenv("STRAVA_AUTH_CLIENT_SECRET")
 
-access_token, athlete = authorize(
-    email=email,
-    password=password,
-    client_id=client_id,
-    client_secret=client_secret,
-    verbose=False
-  )
+# Set required scopes for your application
+# Read more here: https://developers.strava.com/docs/authentication/
+required_scopes = "read_all,activity:read_all,profile:read_all"
+
+# Authenticate
+authenticator = StravaAuthenticator(client_id, client_secret, required_scopes=required_scopes)
+access_token, athlete = authenticator.authenticate(email, password)
 
 if access_token is None or athlete is None:
-  # could not authenticate, set verbose to True to get more info
+  print("could not authenticate with strava. set verbose to true to get more info.")
   exit(0)
 
-# can now start calling the strava api
-headers = {
-  "Authorizaion": "Bearer " + access_token
-}
+# Debug
+print(f"{access_token=}")
+print(f"{athlete=}")
+print(f"{authenticator.access_token=}")
+print(f"{authenticator.athlete=}")
+
+# Make requests to Strava's API
+headers = {"Authorization": "Bearer " + access_token, "Content-Type": "application/json"}
 res = requests.get("https://www.strava.com/api/v3/athlete/activities", headers=headers)
-data = res.json()
+activities = res.json()
+print(f"num activities: {len(activities)}")
 ```
 
 ## Local Development
