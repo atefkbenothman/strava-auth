@@ -1,5 +1,5 @@
 # Strava-Auth
-[![Unit Tests](https://github.com/atefkbenothman/atrava_auth/actions/workflows/test.yaml/badge.svg)](https://github.com/atefkbenothman/strava_auth/actions/workflows/test.ayml)
+[![Unit Tests](https://github.com/atefkbenothman/atrava_auth/actions/workflows/test.yaml/badge.svg)](https://github.com/atefkbenothman/strava_auth/actions/workflows/test.yaml)
 
 Streamline the Strava OAuth2 flow with Selenium, allowing developers to quickly and easily integrate Strava's API into their applications.
 
