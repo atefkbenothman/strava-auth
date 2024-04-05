@@ -27,6 +27,9 @@ if access_token is None or athlete is None:
   print("Could not authenticate with Strava. Set verbose to True to get more info.")
   exit(0)
 
+athlete_id = athlete["id"]
+athlete_name = athlete["firstname"] + athlete["lastname"]
+
 print(f"{access_token=}")
 print(f"{athlete=}")
 
