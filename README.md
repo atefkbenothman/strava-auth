@@ -17,7 +17,7 @@ Streamline the Strava OAuth2 flow with Selenium, allowing developers to quickly 
 
 ## Usage
 ```python
-from strava_auth import authorize
+from strava_auth.auth import authorize
 
 email         = os.getenv("STRAVA_AUTH_EMAIL")
 password      = os.getenv("STRAVA_AUTH_PASSWORD")
