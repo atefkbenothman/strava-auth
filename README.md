@@ -20,7 +20,7 @@ Streamline the Strava OAuth2 flow with Selenium, allowing developers to quickly 
 pip install -i https://test.pypi.org/simple/ strava-auth
 ```
 
-## Usage
+## Example
 ```python
 from strava_auth.auth import authorize
 
