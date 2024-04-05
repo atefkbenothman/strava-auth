@@ -15,6 +15,10 @@ Streamline the Strava OAuth2 flow with Selenium, allowing developers to quickly 
 * Returns the newly generated access token and athlete object
 * Developers can now use the Strava API with the provided access token
 
+## Installation
+```bash
+pip install -i https://test.pypi.org/simple/ strava-auth
+```
 
 ## Usage
 ```python
@@ -46,9 +50,29 @@ data = res.json()
 ```
 
 ## Local Development
-1. Create a `.env` file with the following secrets:
+1. Clone repository
+```bash
+git clone https://github.com/atefkbenothman/strava-auth.git
+```
+2. Setup virtual environment
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+4. Create a `.env` file with the following secrets:
   * `STRAVA_AUTH_EMAIL`
   * `STRAVA_AUTH_PASSWORD`
   * `STRAVA_AUTH_CLIENT_ID`
   * `STRAVA_AUTH_CLIENT_SECRET`
-2. Install all dependencies: `pip3 install -r requirements.txt`
+5. Start making changes to the project!
+
+## Running Tests
+Run tests locally using pytest:
+```bash
+pytest test/test_auth.py            # just the 'auth' suite
+pytest --cov=strava_auth test/      # whole test suite
+```
