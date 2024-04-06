@@ -1,61 +1,78 @@
 import chromedriver_autoinstaller
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 
-def login(authorization_url: str, email: str, password: str) -> str:
-  """
-  Use the selenium webdriver to automatically input the athlete's email
-  and password into the login form.
+class StravaWebLoginFlow:
+  EMAIL_ELEMENT_ID = "email"
+  PASSWORD_ELEMENT_ID = "password"
+  LOGIN_BUTTON_ID = "login-button"
+  AUTHORIZE_BUTTON_ID = "authorize"
 
-  :return: The redirected authorization url
-  """
-  print("logging in...")
+  def __init__(self, authorization_url: str):
+    self.authorization_url = authorization_url
 
-  # automatically install chromedriver
-  chromedriver_autoinstaller.install()
+  def login(self, email: str, password: str) -> str | None:
+    """
+    Automatically input the athlete's email and password into Strava's web login form.
+    Copy the redirected authorization url that holds the 'code' and 'scope' query params.
 
-  options = Options()
-  options.add_argument("--headless")
-  options.add_argument("--no-sandbox")
-  options.add_argument("--disable-dev-shm-usage")
+    :return: The redirected authorization url
+    """
+    print("DEBUG::Logging in with Selenium.")
 
-  driver = webdriver.Chrome(options=options)
+    # Install Chromedriver if it does not already exist
+    chromedriver_autoinstaller.install()
 
-  print(f"opening url: {authorization_url}")
-  driver.get(authorization_url)
+    # Set options
+    options = Options()
+    # options.add_argument("--headless")
+    # options.add_argument("--disable-dev-shm-usage")
 
-  # enter email and password
-  print("inputting email and password...")
-  email_input = driver.find_element(By.ID, "email")
-  email_input.send_keys(email)
-  password_input = driver.find_element(By.ID, "password")
-  password_input.send_keys(password)
+    try:
+      driver = webdriver.Chrome(options=options)
 
-  # click submit
-  print("submitting form...")
-  submit_button = driver.find_element(By.ID, "login-button")
-  submit_button.click()
+      driver.get(self.authorization_url)
 
-  # wait for new redirected page to load
-  wait = WebDriverWait(driver, 10)
-  wait.until(EC.presence_of_element_located((By.ID, "authorize")))
+      # Enter email and password into textbox
+      print("DEBUG::Inputting email and password into textbox.")
+      email_input = driver.find_element(By.ID, self.EMAIL_ELEMENT_ID)
+      password_input = driver.find_element(By.ID, self.PASSWORD_ELEMENT_ID)
+      email_input.send_keys(email)
+      password_input.send_keys(password)
 
-  # click authorize
-  print("clicking on authorize...")
-  authorize_button = driver.find_element(By.ID, "authorize")
-  authorize_button.click()
+      # Click Submit
+      print("DEBUG::Submitting login form.")
+      login_button = driver.find_element(By.ID, self.LOGIN_BUTTON_ID)
+      login_button.click()
 
-  wait = WebDriverWait(driver, 3)
+      # Wait for new redirect page to load
+      wait = WebDriverWait(driver, 5)  # wait 10 seconds before timing out
+      wait.until(EC.presence_of_element_located((By.ID, self.AUTHORIZE_BUTTON_ID)))
 
-  # get authorization response url
-  authorization_response_url = driver.current_url
-  print(f"auth url: {authorization_response_url}")
+      # Click authorize
+      print("DEBUG::Submitting authorize form.")
+      authorize_button = driver.find_element(By.ID, self.AUTHORIZE_BUTTON_ID)
+      authorize_button.click()
 
-  print("done!")
+      # Wait for new redirected page to load
+      wait = WebDriverWait(driver, 3)
 
-  driver.quit()
-  return authorization_response_url
+      # Copy the redirect authorization response url
+      authorization_response_url = driver.current_url
+      print(f"DEBUG::Retrieved authorization response url: {authorization_response_url}")
+
+      print("DEBUG::Succesfully logged in with Selenium.")
+
+      return authorization_response_url
+
+    except (TimeoutException, NoSuchElementException) as e:
+      print(f"DEBUG::Error during Strava web login flow: {e}")
+      return None
+
+    finally:
+      driver.quit()
