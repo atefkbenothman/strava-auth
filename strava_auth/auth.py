@@ -15,7 +15,7 @@ class StravaAuthenticator:
   AUTHORIZE_BASE_URL = "https://www.strava.com/oauth/authorize"
   AUTHORIZE_RESPONSE_TYPE = "code"
   AUTHORIZE_APPROVAL_PROMPT = "force"
-  AUTHORIZE_REDIRECT_URI = "http://localhost:9191"  # set a random url to redirect to
+  AUTHORIZE_REDIRECT_URI = "http://localhost:9191/"  # set a random url to redirect to
   EXCHANGE_BASE_URL = "https://www.strava.com/oauth/token"
   EXCHANGE_GRANT_TYPE = "authorization_code"
 
@@ -32,6 +32,8 @@ class StravaAuthenticator:
     """
     Set the required scopes need to use the application.
     """
+    if scopes == "":
+      raise ValueError("scope must not be empty")
     self.required_scopes = scopes
     return self.required_scopes
 
@@ -40,8 +42,12 @@ class StravaAuthenticator:
     Generate the authorization url used to authenticate to Strava.
     """
     self.logger.info("Generating Strava authorization url")
+
     self.logger.debug(f"{client_id=}")
     self.logger.debug(f"{required_scopes=}")
+
+    if client_id == "" or required_scopes == "" or " " in client_id or " " in required_scopes:
+      raise ValueError("client_id and required_scopes cannot be empty and cannot contain spaces")
 
     params = {
       "client_id": client_id,
@@ -51,8 +57,7 @@ class StravaAuthenticator:
       "scope": required_scopes,
     }
     queries = urllib.parse.urlencode(params)
-
-    authorization_url = self.AUTHORIZE_BASE_URL + "?" + queries
+    authorization_url = f"{self.AUTHORIZE_BASE_URL}?{queries}"
 
     self.logger.debug(f"{authorization_url=}")
 
@@ -63,7 +68,11 @@ class StravaAuthenticator:
     Extract the code and scope query params from the returned url.
     """
     self.logger.info("Extracting code and scope from query params")
+
     self.logger.debug(f"{authorization_response_url=}")
+
+    if authorization_response_url == "" or authorization_response_url.split("?")[0] != self.AUTHORIZE_REDIRECT_URI:
+      raise ValueError("authorization_response_url must not be empty and must not be different than the default redirect uri")
 
     parsed_url = urllib.parse.urlparse(authorization_response_url)
     query_dict = urllib.parse.parse_qs(parsed_url.query)
@@ -79,13 +88,34 @@ class StravaAuthenticator:
 
     return code[0], scope[0]
 
-  def verify_granted_scopes(self, required_scopes: str, granted_scopes: str) -> None:
+  def check_valid_scope(self, scope: str) -> bool:
+    """
+    Check if a scope is formatted correctly.
+    """
+    if not scope or "," not in scope:
+      return False
+
+    parts = scope.split(",")
+
+    for scp in parts:
+      if not scp.strip():
+        return False
+      if not all(c.isalnum() or c in ("_", ":") for c in scp):
+        return False
+
+    return True
+
+  def verify_granted_scopes(self, required_scopes: str, granted_scopes: str) -> bool:
     """
     Verify that the athlete granted the required scopes.
     """
     self.logger.info("Verifying granted scopes")
+
     self.logger.debug(f"{required_scopes=}")
     self.logger.debug(f"{granted_scopes=}")
+
+    if not self.check_valid_scope(required_scopes) or not self.check_valid_scope(granted_scopes):
+      raise ValueError("scope is not valid")
 
     valid = all(req_scope in granted_scopes.split(",") for req_scope in required_scopes.split(","))
 
@@ -94,7 +124,7 @@ class StravaAuthenticator:
 
     self.logger.info("Verified scopes")
 
-    return
+    return True
 
   def exchange_token(self, client_id: str, client_secret: str, authorization_code: str) -> tuple[str, dict]:
     """
