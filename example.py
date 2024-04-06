@@ -15,7 +15,7 @@ client_id = os.getenv("STRAVA_AUTH_CLIENT_ID")
 client_secret = os.getenv("STRAVA_AUTH_CLIENT_SECRET")
 
 if email is None or password is None or client_id is None or client_secret is None:
-  print("environment variables not set properly.")
+  print("Environment variables not set properly.")
   exit(0)
 
 # Set required scopes for your application
@@ -23,11 +23,11 @@ if email is None or password is None or client_id is None or client_secret is No
 required_scopes = "read_all,activity:read_all,profile:read_all"
 
 # Authenticate
-authenticator = StravaAuthenticator(client_id, client_secret, required_scopes=required_scopes)
+authenticator = StravaAuthenticator(client_id, client_secret, required_scopes=required_scopes, log_level="INFO")
 access_token, athlete = authenticator.authenticate(email, password)
 
 if access_token is None or athlete is None:
-  print("could not authenticate with strava. set verbose to true to get more info.")
+  # could not authenticate with Strava. Set log_level="DEBUG" in StravaAuthenticator to get more info
   exit(0)
 
 # Debug
@@ -40,4 +40,4 @@ print(f"{authenticator.athlete=}")
 headers = {"Authorization": "Bearer " + access_token, "Content-Type": "application/json"}
 res = requests.get("https://www.strava.com/api/v3/athlete/activities", headers=headers)
 activities = res.json()
-print(f"num activities: {len(activities)}")
+print(f"Num activities: {len(activities)}")
