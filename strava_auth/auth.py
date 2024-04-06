@@ -115,7 +115,7 @@ class StravaAuthenticator:
     self.logger.debug(f"{granted_scopes=}")
 
     if not self.check_valid_scope(required_scopes) or not self.check_valid_scope(granted_scopes):
-      raise ValueError("scope is not valid")
+      raise ValueError("Scope is not valid")
 
     valid = all(req_scope in granted_scopes.split(",") for req_scope in required_scopes.split(","))
 
