@@ -32,13 +32,13 @@ from strava_auth.auth import StravaAuthenticator
 # Setup environment variables
 load_dotenv()
 
-email         = os.getenv("STRAVA_AUTH_EMAIL")
-password      = os.getenv("STRAVA_AUTH_PASSWORD")
 client_id     = os.getenv("STRAVA_AUTH_CLIENT_ID")
 client_secret = os.getenv("STRAVA_AUTH_CLIENT_SECRET")
+email         = os.getenv("STRAVA_AUTH_EMAIL")
+password      = os.getenv("STRAVA_AUTH_PASSWORD")
 
 if email is None or password is None or client_id is None or client_secret is None:
-  print("Environment variables not set properly.")
+  # Environment variables not set properly
   exit(0)
 
 # Set required scopes for your application
@@ -55,7 +55,7 @@ authenticator = StravaAuthenticator(
 access_token, athlete = authenticator.authenticate(email, password)
 
 if access_token is None or athlete is None:
-  # could not authenticate with Strava. Set log_level="DEBUG" in StravaAuthenticator to get more info
+  # Could not authenticate with Strava. Set log_level="DEBUG" in StravaAuthenticator to get more info
   exit(0)
 
 # Debug
