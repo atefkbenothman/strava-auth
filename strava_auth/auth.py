@@ -156,7 +156,7 @@ class StravaAuthenticator:
     """
     Complete the entire Srava OAuth2 flow.
     """
-    self.logger.debug(f"Logging set to {self.log_level}")
+    self.logger.info(f"Logging set to {self.log_level}")
     self.logger.info("Authenticating with Strava...")
 
     try:
