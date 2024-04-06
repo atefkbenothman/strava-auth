@@ -23,7 +23,7 @@ class StravaWebLoginFlow:
 
     :return: The redirected authorization url
     """
-    print("DEBUG::Logging in with Selenium.")
+    print("Logging in with Selenium.")
 
     # Install Chromedriver if it does not already exist
     chromedriver_autoinstaller.install()
@@ -39,14 +39,14 @@ class StravaWebLoginFlow:
       driver.get(self.authorization_url)
 
       # Enter email and password into textbox
-      print("DEBUG::Inputting email and password into textbox.")
+      print("Inputting email and password into textbox.")
       email_input = driver.find_element(By.ID, self.EMAIL_ELEMENT_ID)
       password_input = driver.find_element(By.ID, self.PASSWORD_ELEMENT_ID)
       email_input.send_keys(email)
       password_input.send_keys(password)
 
       # Click Submit
-      print("DEBUG::Submitting login form.")
+      print("Submitting login form.")
       login_button = driver.find_element(By.ID, self.LOGIN_BUTTON_ID)
       login_button.click()
 
@@ -55,7 +55,7 @@ class StravaWebLoginFlow:
       wait.until(EC.presence_of_element_located((By.ID, self.AUTHORIZE_BUTTON_ID)))
 
       # Click authorize
-      print("DEBUG::Submitting authorize form.")
+      print("Submitting authorize form.")
       authorize_button = driver.find_element(By.ID, self.AUTHORIZE_BUTTON_ID)
       authorize_button.click()
 
@@ -64,14 +64,14 @@ class StravaWebLoginFlow:
 
       # Copy the redirect authorization response url
       authorization_response_url = driver.current_url
-      print(f"DEBUG::Retrieved authorization response url: {authorization_response_url}")
+      print(f"Retrieved authorization response url: {authorization_response_url}")
 
-      print("DEBUG::Succesfully logged in with Selenium.")
+      print("Succesfully logged in with Selenium.")
 
       return authorization_response_url
 
     except (TimeoutException, NoSuchElementException) as e:
-      print(f"DEBUG::Error during Strava web login flow: {e}")
+      print(f"Error during Strava web login flow: {e}")
       return None
 
     finally:

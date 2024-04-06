@@ -10,8 +10,6 @@ class StravaAuthenticationError(Exception):
 
 
 class StravaAuthenticator:
-  DEBUG = "None"
-
   DEFAULT_SCOPES = "read,activity:read"
   AUTHORIZE_BASE_URL = "https://www.strava.com/oauth/authorize"
   AUTHORIZE_RESPONSE_TYPE = "code"
@@ -20,23 +18,12 @@ class StravaAuthenticator:
   EXCHANGE_BASE_URL = "https://www.strava.com/oauth/token"
   EXCHANGE_GRANT_TYPE = "authorization_code"
 
-  def __init__(self, client_id: str, client_secret: str, required_scopes: str | None = None, debug: bool = False):
+  def __init__(self, client_id: str, client_secret: str, required_scopes: str | None = None):
     self.client_id = client_id
     self.client_secret = client_secret
     self.required_scopes = required_scopes if required_scopes else self.DEFAULT_SCOPES
     self.access_token: str | None = None
     self.athlete: dict | None = None
-    self.debug = True
-
-  def logger(self, message: str, verbose: bool = False) -> None:
-    if self.DEBUG == "None":
-      return
-    if self.DEBUG == "Info" and not verbose:
-      print(f"INFO::{message}")
-      return
-    if self.DEBUG == "Verbose":
-      print(f"DEBUG::{message}")
-      return
 
   def set_required_scopes(self, scopes: str) -> str:
     """
@@ -49,11 +36,9 @@ class StravaAuthenticator:
     """
     Generate the authorization url used to authenticate to Strava.
     """
-    self.logger("Generating Strava authorization url.")
-
-    if self.DEBUG == "Verbose":
-      self.logger(f"{client_id=}")
-      self.logger(f"{required_scopes=}")
+    print("Generating Strava authorization url.")
+    print(f"{client_id=}")
+    print(f"{required_scopes=}")
 
     params = {
       "client_id": client_id,
@@ -66,8 +51,7 @@ class StravaAuthenticator:
 
     authorization_url = self.AUTHORIZE_BASE_URL + "?" + queries
 
-    if self.DEBUG == "Verbose":
-      self.logger(f"{authorization_url=}")
+    print(f"{authorization_url=}")
 
     return authorization_url
 
@@ -75,10 +59,9 @@ class StravaAuthenticator:
     """
     Extract the code and scope query params from the returned url.
     """
-    self.logger("Extracting code and scope from query params.")
+    print("Extracting code and scope from query params.")
 
-    if self.DEBUG == "Verbose":
-      self.logger(f"{authorization_response_url=}")
+    print(f"{authorization_response_url=}")
 
     parsed_url = urllib.parse.urlparse(authorization_response_url)
     query_dict = urllib.parse.parse_qs(parsed_url.query)
@@ -89,9 +72,8 @@ class StravaAuthenticator:
     if code is None or scope is None:
       raise StravaAuthenticationError(f"Failed to extract code and/or scope from the authorization response url: {authorization_response_url,}")
 
-    if self.DEBUG == "Verbose":
-      self.logger(f"{code=}")
-      self.logger(f"{scope=}")
+    print(f"{code=}")
+    print(f"{scope=}")
 
     return code[0], scope[0]
 
@@ -99,18 +81,17 @@ class StravaAuthenticator:
     """
     Verify that the athlete granted the required scopes.
     """
-    self.logger("Verifying granted scopes.")
+    print("Verifying granted scopes.")
 
-    if self.DEBUG == "Verbose":
-      self.logger(f"{required_scopes=}")
-      self.logger(f"{granted_scopes=}")
+    print(f"{required_scopes=}")
+    print(f"{granted_scopes=}")
 
     valid = all(req_scope in granted_scopes.split(",") for req_scope in required_scopes.split(","))
 
     if not valid:
       raise StravaAuthenticationError(f"The athlete did not grant the required scopes. Granted scopes: {granted_scopes}")
 
-    self.logger("Verified scopes.")
+    print("Verified scopes.")
 
     return
 
@@ -119,10 +100,9 @@ class StravaAuthenticator:
     Exchange the authorization code for an access token.
     Also return the athlete object.
     """
-    self.logger("Exchanging authorization code for access token.")
+    print("Exchanging authorization code for access token.")
 
-    if self.DEBUG == "Verbose":
-      self.logger(f"{authorization_code=}")
+    print(f"{authorization_code=}")
 
     params = {"client_id": client_id, "client_secret": client_secret, "code": authorization_code, "grant_type": self.EXCHANGE_GRANT_TYPE}
     res = requests.post(self.EXCHANGE_BASE_URL, params=params)
@@ -132,8 +112,7 @@ class StravaAuthenticator:
 
     data = res.json()
 
-    if self.DEBUG == "Verbose":
-      self.logger(f"Exchange API response data={data}")
+    print(f"Exchange API response data={data}")
 
     access_token = data.get("access_token", None)
     athlete: dict = data.get("athlete", None)
@@ -170,7 +149,7 @@ class StravaAuthenticator:
       access_token, athlete = self.exchange_token(self.client_id, self.client_secret, authorization_code)
 
     except StravaAuthenticationError as e:
-      self.logger(str(e))
+      print(str(e))
       return None, None
 
     else:
@@ -179,8 +158,7 @@ class StravaAuthenticator:
 
       print("Succesfully authenticated.")
 
-      if self.DEBUG == "Verbose":
-        self.logger(f"{access_token=}")
-        self.logger(f"{athlete=}")
+      print(f"{access_token=}")
+      print(f"{athlete=}")
 
       return self.access_token, self.athlete
