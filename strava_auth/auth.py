@@ -138,11 +138,11 @@ class StravaAuthenticator:
     res = requests.post(self.EXCHANGE_BASE_URL, params=params)
 
     if res.status_code != 200:
-      raise StravaAuthenticationError("Error exchanging authorization code for access token")
+      raise StravaAuthenticationError(f"Error exchanging authorization code for access token: {res.status_code} {res.json()}")
 
     data = res.json()
 
-    self.logger.debug(f"Exchange API response data={data}")
+    self.logger.debug(f"Exchange token response: {data}")
 
     access_token = data.get("access_token", None)
     athlete: dict = data.get("athlete", None)

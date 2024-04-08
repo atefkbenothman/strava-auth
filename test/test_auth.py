@@ -1,15 +1,18 @@
 import urllib
+from unittest.mock import Mock
 
 import pytest
+import requests
 
 from strava_auth.auth import StravaAuthenticationError, StravaAuthenticator
+from strava_auth.login import StravaWebLoginFlow
 
 
 @pytest.fixture
 def authenticator() -> StravaAuthenticator:
-  client_id = "CLIENT_ID"
-  client_secret = "CLIENT_SECRET"
-  auth = StravaAuthenticator(client_id=client_id, client_secret=client_secret)
+  valid_client_id = "CLIENT_ID"
+  valid_client_secret = "CLIENT_SECRET"
+  auth = StravaAuthenticator(valid_client_id, valid_client_secret)
   return auth
 
 
@@ -176,3 +179,119 @@ def test_verify_granted_scopes_with_invalid_scope(authenticator):
   invalid_scope_3 = ""
   with pytest.raises(ValueError):
     authenticator.verify_granted_scopes(invalid_scope_3, invalid_scope_3)
+
+  invalid_scope_4 = "?@/[],test"
+  with pytest.raises(ValueError):
+    authenticator.verify_granted_scopes(invalid_scope_4, invalid_scope_4)
+
+
+# ---- exchange_token() ----
+
+
+@pytest.fixture
+def mock_post(mocker) -> Mock:
+  mock_response = Mock(spec=requests.Response)
+  mock_response.status_code = 200
+  valid_access_token = "abc123"
+  valid_athlete = {"id": 1, "firstname": "test", "lastname": "test"}
+  mock_response.json.return_value = {"access_token": valid_access_token, "athlete": valid_athlete}
+  mock = Mock(return_value=mock_response)
+  mocker.patch("requests.post", return_value=mock_response)
+  return mock
+
+
+def test_exchange_token_success(authenticator, mock_post):
+  valid_access_token = "abc123"
+  valid_athlete = {"id": 1, "firstname": "test", "lastname": "test"}
+  valid_client_id = "123"
+  valid_client_secret = "abc123"
+  valid_authorization_code = "code"
+  access_token, athlete = authenticator.exchange_token(valid_client_id, valid_client_secret, valid_authorization_code)
+  assert access_token == valid_access_token
+  assert athlete == valid_athlete
+
+
+def test_exchange_token_invalid_credentials(authenticator, mock_post):
+  mock_post.return_value.status_code = 401
+  invalid_client_id = "invalidclientid"
+  invalid_client_secret = "invalidsecret"
+  valid_authorization_code = "code"
+  with pytest.raises(StravaAuthenticationError):
+    access_token, athlete = authenticator.exchange_token(invalid_client_id, invalid_client_secret, valid_authorization_code)
+
+
+def test_exchange_token_missing_data(authenticator, mock_post):
+  mock_post.return_value.status_code = 200
+  mock_post.return_value.json.return_value = {"some_other_field": "some_value"}
+  valid_client_id = "123"
+  valid_client_secret = "abc123"
+  valid_authorization_code = "code"
+  with pytest.raises(StravaAuthenticationError):
+    access_token, athlete = authenticator.exchange_token(valid_client_id, valid_client_secret, valid_authorization_code)
+
+
+# ---- authenticate() ----
+
+
+@pytest.fixture
+def mock_strava_web_login_flow() -> StravaWebLoginFlow:
+  authorization_url = "https://www.strava.com/oauth/authorize?client_id=client_id&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A9191%2F&approval_prompt=force&scope=read%2Cactivity%3Aread"
+  return StravaWebLoginFlow(authorization_url=authorization_url)
+
+
+@pytest.fixture
+def mock_strava_web_login(mocker) -> Mock:
+  authorize_response_url = "http://localhost:9191/?code=valid_code&scope=read,activity:read"
+  mock = mocker.patch.object(StravaWebLoginFlow, "login", return_value=authorize_response_url)
+  return mock
+
+
+@pytest.fixture
+def mock_strava_web_login_invalid(mocker) -> Mock:
+  mock = mocker.patch.object(StravaWebLoginFlow, "login", return_value=None)
+  return mock
+
+
+@pytest.fixture
+def mock_generate_strava_authorize_url(mocker, authenticator) -> Mock:
+  authorize_url = "https://www.strava.com/oauth/authorize?client_id=client_id&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A9191%2F&approval_prompt=force&scope=read%2Cactivity%3Aread"
+  mock = Mock(return_value=authorize_url)
+  mocker.patch.object(authenticator, "generate_strava_authorize_url", mock)
+  return mock
+
+
+@pytest.fixture
+def mock_extract_code_and_scope(mocker, authenticator) -> Mock:
+  mock = Mock(return_value=("valid_code", "read,activity:read"))
+  mocker.patch.object(authenticator, "extract_code_and_scope", mock)
+  return mock
+
+
+@pytest.fixture
+def mock_exchange_token(mocker, authenticator) -> Mock:
+  mock = Mock(return_value=("abc123", {"id": 1, "firstname": "test"}))
+  mocker.patch.object(authenticator, "exchange_token", mock)
+  return mock
+
+
+def test_authenticate_success(
+  authenticator, mock_generate_strava_authorize_url, mock_extract_code_and_scope, mock_strava_web_login_flow, mock_strava_web_login, mock_exchange_token
+):
+  token, athlete = authenticator.authenticate("abc@123.com", "abc123")
+  assert token == "abc123"
+  assert athlete == {"id": 1, "firstname": "test"}
+
+
+def test_authenticate_extract_code_and_scope_failure(
+  authenticator, mock_generate_strava_authorize_url, mock_extract_code_and_scope, mock_strava_web_login_flow, mock_strava_web_login, mock_exchange_token
+):
+  mock_extract_code_and_scope.side_effect = StravaAuthenticationError("testing...")
+  token, athlete = authenticator.authenticate("abc@123.com", "abc123")
+  assert token is None
+  assert athlete is None
+
+
+def test_authenticate_strava_web_login_failure(authenticator, mock_generate_strava_authorize_url, mock_strava_web_login_flow, mock_strava_web_login_invalid):
+  token, athlete = authenticator.authenticate("abc@123.com", "abc123")
+  assert token is None
+  assert athlete is None
