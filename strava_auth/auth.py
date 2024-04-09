@@ -1,3 +1,6 @@
+import json
+import os
+import time
 import urllib.parse
 
 import requests
@@ -19,14 +22,59 @@ class StravaAuthenticator:
   EXCHANGE_BASE_URL = "https://www.strava.com/oauth/token"
   EXCHANGE_GRANT_TYPE = "authorization_code"
 
-  def __init__(self, client_id: str, client_secret: str, required_scopes: str | None = None, log_level: str | None = None):
+  def __init__(
+    self, client_id: str, client_secret: str, required_scopes: str | None = None, log_level: str | None = None, cache_file: str = "strava-auth-cache.json"
+  ):
     self.client_id = client_id
     self.client_secret = client_secret
     self.required_scopes = required_scopes if required_scopes else self.DEFAULT_SCOPES
     self.access_token: str | None = None
+    self.expires_at: int | None = None
+    self.refresh_token: str | None = None
     self.athlete: dict | None = None
     self.log_level = log_level
     self.logger = get_logger(log_level)
+    self.cache_file = cache_file
+
+  def save_to_cache(self, file_name: str, access_token: str, refresh_token: str, expires_at: int, athlete: dict) -> None:
+    """
+    Save the access and refresh tokens into a file.
+    """
+    self.logger.info("Saving tokens to cache")
+    cache_data = {"access_token": access_token, "refresh_token": refresh_token, "expires_at": expires_at, "athlete": athlete}
+    try:
+      with open(file_name, "w") as f:
+        json.dump(cache_data, f, indent=2)
+    except IOError as e:
+      self.logger.error(f"Error saving tokens to cache: {e}")
+
+  def load_from_cache(self, file_name: str) -> bool:
+    """
+    Load tokens from cache if cache file exists.
+    """
+    if os.path.exists(file_name):
+      try:
+        with open(file_name, "r") as f:
+          cache_data = json.load(f)
+          access_token = cache_data.get("access_token", None)
+          refresh_token = cache_data.get("refresh_token", None)
+          athlete = cache_data.get("athlete", None)
+          expires_at = cache_data.get("expires_at", None)
+
+          if time.time() < expires_at:
+            self.access_token = access_token
+            self.refresh_token = refresh_token
+            self.athlete = athlete
+            self.expires_at = expires_at
+            return True
+          else:
+            # token has expired, use refresh token to get new access token
+            self.logger.info("Access token has expired. Refreshing new token")
+
+      except (IOError, ValueError) as e:
+        self.logger.error(f"Error loading cached tokens: {e}")
+
+    return False
 
   def set_required_scopes(self, scopes: str) -> str:
     """
@@ -126,7 +174,7 @@ class StravaAuthenticator:
 
     return True
 
-  def exchange_token(self, client_id: str, client_secret: str, authorization_code: str) -> tuple[str, dict]:
+  def exchange_token(self, client_id: str, client_secret: str, authorization_code: str) -> dict:
     """
     Exchange the authorization code for an access token.
     Also return the athlete object.
@@ -144,20 +192,22 @@ class StravaAuthenticator:
 
     self.logger.debug(f"Exchange token response: {data}")
 
-    access_token = data.get("access_token", None)
-    athlete: dict = data.get("athlete", None)
-
-    if access_token is None or athlete is None:
+    if data.get("access_token", None) is None:
       raise StravaAuthenticationError(f"Could not extract access token and/or athlete from response: {data}")
 
-    return access_token, athlete
+    return data
 
   def authenticate(self, email: str, password: str) -> tuple[str | None, dict | None]:
     """
     Complete the entire Srava OAuth2 flow.
     """
+    print("Authenticating with Strava...")
     self.logger.info(f"Logging set to {self.log_level}")
-    self.logger.info("Authenticating with Strava...")
+
+    # check if cache exists. if it does, read from cache
+    if self.load_from_cache(self.cache_file):
+      self.logger.info("Loaded access token from cache")
+      return self.access_token, self.athlete
 
     try:
       # 1. generate authorizaton url
@@ -178,19 +228,34 @@ class StravaAuthenticator:
       self.verify_granted_scopes(self.required_scopes, granted_scopes)
 
       # 5. exchange authorization code for access token
-      access_token, athlete = self.exchange_token(self.client_id, self.client_secret, authorization_code)
+      data = self.exchange_token(self.client_id, self.client_secret, authorization_code)
+
+      access_token = data.get("access_token", None)
+      athlete = data.get("athlete", None)
+      refresh_token = data.get("refresh_token", None)
+      expires_at = data.get("expires_at", None)
+
+      if access_token is None or athlete is None or refresh_token is None or expires_at is None:
+        raise StravaAuthenticationError("Could not extract tokens from Strava api response")
+
+      self.access_token = access_token
+      self.refresh_token = refresh_token
+      self.expires_at = expires_at
+      self.athlete = athlete
+
+      # 6. cache the tokens
+      self.save_to_cache(self.cache_file, access_token, refresh_token, expires_at, athlete)
 
     except StravaAuthenticationError as e:
       self.logger.error(str(e))
       return None, None
 
     else:
-      self.access_token = access_token
-      self.athlete = athlete
-
-      self.logger.info("Succesfully authenticated")
+      print("Succesfully authenticated")
 
       self.logger.debug(f"{access_token=}")
+      self.logger.debug(f"{refresh_token=}")
+      self.logger.debug(f"{expires_at=}")
       self.logger.debug(f"{athlete=}")
 
       return self.access_token, self.athlete

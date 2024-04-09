@@ -206,9 +206,9 @@ def test_exchange_token_success(authenticator, mock_post):
   valid_client_id = "123"
   valid_client_secret = "abc123"
   valid_authorization_code = "code"
-  access_token, athlete = authenticator.exchange_token(valid_client_id, valid_client_secret, valid_authorization_code)
-  assert access_token == valid_access_token
-  assert athlete == valid_athlete
+  data = authenticator.exchange_token(valid_client_id, valid_client_secret, valid_authorization_code)
+  assert data["access_token"] == valid_access_token
+  assert data["athlete"] == valid_athlete
 
 
 def test_exchange_token_invalid_credentials(authenticator, mock_post):
@@ -269,13 +269,35 @@ def mock_extract_code_and_scope(mocker, authenticator) -> Mock:
 
 @pytest.fixture
 def mock_exchange_token(mocker, authenticator) -> Mock:
-  mock = Mock(return_value=("abc123", {"id": 1, "firstname": "test"}))
+  return_data = {"expires_at": 1234567, "refresh_token": "refreshtoken", "access_token": "abc123", "athlete": {"id": 1, "firstname": "test"}}
+  mock = Mock(return_value=return_data)
   mocker.patch.object(authenticator, "exchange_token", mock)
   return mock
 
 
+@pytest.fixture
+def mock_load_from_cache(mocker, authenticator) -> Mock:
+  mock = Mock(return_value=False)
+  mocker.patch.object(authenticator, "load_from_cache", mock)
+  return mock
+
+
+@pytest.fixture
+def mock_save_to_cache(mocker, authenticator) -> Mock:
+  mock = Mock(return_value=None)
+  mocker.patch.object(authenticator, "save_to_cache", mock)
+  return mock
+
+
 def test_authenticate_success(
-  authenticator, mock_generate_strava_authorize_url, mock_extract_code_and_scope, mock_strava_web_login_flow, mock_strava_web_login, mock_exchange_token
+  authenticator,
+  mock_load_from_cache,
+  mock_generate_strava_authorize_url,
+  mock_extract_code_and_scope,
+  mock_strava_web_login_flow,
+  mock_strava_web_login,
+  mock_exchange_token,
+  mock_save_to_cache,
 ):
   token, athlete = authenticator.authenticate("abc@123.com", "abc123")
   assert token == "abc123"
@@ -283,7 +305,14 @@ def test_authenticate_success(
 
 
 def test_authenticate_extract_code_and_scope_failure(
-  authenticator, mock_generate_strava_authorize_url, mock_extract_code_and_scope, mock_strava_web_login_flow, mock_strava_web_login, mock_exchange_token
+  authenticator,
+  mock_load_from_cache,
+  mock_generate_strava_authorize_url,
+  mock_extract_code_and_scope,
+  mock_strava_web_login_flow,
+  mock_strava_web_login,
+  mock_exchange_token,
+  mock_save_to_cache,
 ):
   mock_extract_code_and_scope.side_effect = StravaAuthenticationError("testing...")
   token, athlete = authenticator.authenticate("abc@123.com", "abc123")
@@ -291,7 +320,9 @@ def test_authenticate_extract_code_and_scope_failure(
   assert athlete is None
 
 
-def test_authenticate_strava_web_login_failure(authenticator, mock_generate_strava_authorize_url, mock_strava_web_login_flow, mock_strava_web_login_invalid):
+def test_authenticate_strava_web_login_failure(
+  authenticator, mock_load_from_cache, mock_generate_strava_authorize_url, mock_strava_web_login_flow, mock_strava_web_login_invalid
+):
   token, athlete = authenticator.authenticate("abc@123.com", "abc123")
   assert token is None
   assert athlete is None
