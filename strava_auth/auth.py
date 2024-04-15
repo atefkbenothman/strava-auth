@@ -21,6 +21,7 @@ class StravaAuthenticator:
   AUTHORIZE_REDIRECT_URI = "http://localhost:9191/"  # set a random url to redirect to
   EXCHANGE_BASE_URL = "https://www.strava.com/oauth/token"
   EXCHANGE_GRANT_TYPE = "authorization_code"
+  REFRESH_GRANT_TYPE = "refresh_token"
 
   def __init__(
     self, client_id: str, client_secret: str, required_scopes: str | None = None, log_level: str | None = None, cache_file: str = "strava-auth-cache.json"
@@ -67,9 +68,28 @@ class StravaAuthenticator:
             self.athlete = athlete
             self.expires_at = expires_at
             return True
+
           else:
-            # token has expired, use refresh token to get new access token
             self.logger.info("Access token has expired. Refreshing new token")
+            try:
+              # token has expired, use refresh token to get new access token
+              data = self.refresh_access_token(self.client_id, self.client_secret, refresh_token)
+            except StravaAuthenticationError as e:
+              self.logger.error(e)
+              return False
+            else:
+              access = data.get("access_token", None)
+              expires = data.get("expires_at", None)
+              refresh = data.get("refresh_token", None)
+
+              self.access_token = access
+              self.refresh_token = refresh
+              self.expires_at = expires_at
+              self.athlete = athlete
+
+              # cache the tokens
+              self.save_to_cache(self.cache_file, access, refresh, expires, athlete)
+              return True
 
       except (IOError, ValueError) as e:
         self.logger.error(f"Error loading cached tokens: {e}")
@@ -197,6 +217,27 @@ class StravaAuthenticator:
 
     return data
 
+  def refresh_access_token(self, client_id: str, client_secret: str, refresh_token: str) -> dict:
+    """
+    Refresh the access token using the refresh token.
+    """
+    self.logger.info("Refreshing access token")
+
+    params = {"client_id": client_id, "client_secret": client_secret, "grant_type": self.REFRESH_GRANT_TYPE, "refresh_token": refresh_token}
+    res = requests.post(self.EXCHANGE_BASE_URL, params=params)
+
+    if res.status_code != 200:
+      raise StravaAuthenticationError(f"Error refreshing access token using refresh token: {res.status_code} {res.json()}")
+
+    data = res.json()
+
+    self.logger.debug(f"Refresh token response: {data}")
+
+    if data.get("access_token", None) is None:
+      raise StravaAuthenticationError(f"Could not extract access token and/or athlete from response: {data}")
+
+    return data
+
   def authenticate(self, email: str, password: str) -> tuple[str | None, dict | None]:
     """
     Complete the entire Srava OAuth2 flow.
@@ -206,7 +247,7 @@ class StravaAuthenticator:
 
     # check if cache exists. if it does, read from cache
     if self.load_from_cache(self.cache_file):
-      self.logger.info("Loaded access token from cache")
+      print("Loaded access token from cache")
       return self.access_token, self.athlete
 
     try:
