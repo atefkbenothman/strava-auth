@@ -243,7 +243,7 @@ class StravaAuthenticator:
     Complete the entire Srava OAuth2 flow.
     """
     print("Authenticating with Strava...")
-    self.logger.info(f"Logging set to {self.log_level}")
+    self.logger.debug(f"Logging set to {self.log_level}")
 
     # check if cache exists. if it does, read from cache
     if self.load_from_cache(self.cache_file):
