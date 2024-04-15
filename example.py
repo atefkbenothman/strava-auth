@@ -23,7 +23,7 @@ if email is None or password is None or client_id is None or client_secret is No
 required_scopes = "read_all,activity:read_all,profile:read_all"
 
 # Authenticate
-authenticator = StravaAuthenticator(client_id, client_secret, required_scopes=required_scopes, log_level="INFO")
+authenticator = StravaAuthenticator(client_id, client_secret, required_scopes=required_scopes, log_level="INFO", cache_file="strava-auth-cache.json")
 access_token, athlete = authenticator.authenticate(email, password)
 
 if access_token is None or athlete is None:
@@ -33,8 +33,6 @@ if access_token is None or athlete is None:
 # Debug
 print(f"{access_token=}")
 print(f"{athlete=}")
-print(f"{authenticator.access_token=}")
-print(f"{authenticator.athlete=}")
 
 # Make requests to Strava's API
 headers = {"Authorization": "Bearer " + access_token, "Content-Type": "application/json"}
