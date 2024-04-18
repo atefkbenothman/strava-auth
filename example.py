@@ -4,7 +4,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from strava_auth.auth import StravaAuthenticator
+from strava_auth.auth import StravaOAuth2
 
 # Setup environment variables
 load_dotenv()
@@ -23,11 +23,13 @@ if email is None or password is None or client_id is None or client_secret is No
 required_scopes = "read_all,activity:read_all,profile:read_all"
 
 # Authenticate
-authenticator = StravaAuthenticator(client_id, client_secret, required_scopes=required_scopes, log_level="INFO", cache_file="strava-auth-cache.json")
+authenticator = StravaOAuth2(
+  client_id, client_secret, required_scopes=required_scopes, log_level="INFO", cache_file="strava-auth-cache.json"
+)
 access_token, athlete = authenticator.authenticate(email, password)
 
 if access_token is None or athlete is None:
-  # could not authenticate with Strava. Set log_level="DEBUG" in StravaAuthenticator to get more info
+  print("Could not authenticate with Strava.")  # Set log_level="DEBUG" in StravaOAuth2 to get more info
   exit(0)
 
 # Debug
