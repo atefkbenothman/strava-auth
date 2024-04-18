@@ -27,18 +27,18 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from strava_auth.auth import StravaAuthenticator
+from strava_auth.auth import StravaOAuth2
 
 # Setup environment variables
 load_dotenv()
 
-client_id     = os.getenv("STRAVA_AUTH_CLIENT_ID")
+email = os.getenv("STRAVA_AUTH_EMAIL")
+password = os.getenv("STRAVA_AUTH_PASSWORD")
+client_id = os.getenv("STRAVA_AUTH_CLIENT_ID")
 client_secret = os.getenv("STRAVA_AUTH_CLIENT_SECRET")
-email         = os.getenv("STRAVA_AUTH_EMAIL")
-password      = os.getenv("STRAVA_AUTH_PASSWORD")
 
 if email is None or password is None or client_id is None or client_secret is None:
-  # Environment variables not set properly
+  print("Environment variables not set properly.")
   exit(0)
 
 # Set required scopes for your application
@@ -46,23 +46,18 @@ if email is None or password is None or client_id is None or client_secret is No
 required_scopes = "read_all,activity:read_all,profile:read_all"
 
 # Authenticate
-authenticator = StravaAuthenticator(
-  client_id,
-  client_secret,
-  required_scopes=required_scopes,
-  log_level="INFO" # Options: None | "INFO" | "DEBUG"
+authenticator = StravaOAuth2(
+  client_id, client_secret, required_scopes=required_scopes, log_level="INFO", cache_file="strava-auth-cache.json"
 )
 access_token, athlete = authenticator.authenticate(email, password)
 
 if access_token is None or athlete is None:
-  # Could not authenticate with Strava. Set log_level="DEBUG" in StravaAuthenticator to get more info
+  print("Could not authenticate with Strava.")  # Set log_level="DEBUG" in StravaOAuth2 to get more info
   exit(0)
 
 # Debug
 print(f"{access_token=}")
 print(f"{athlete=}")
-print(f"{authenticator.access_token=}")
-print(f"{authenticator.athlete=}")
 
 # Make requests to Strava's API
 headers = {"Authorization": "Bearer " + access_token, "Content-Type": "application/json"}
