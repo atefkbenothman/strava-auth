@@ -28,7 +28,7 @@ exclude = [
     "setup.py",
 ]
 
-line-length = 160
+line-length = 120
 indent-width = 2
 
 target-version = "py311"
