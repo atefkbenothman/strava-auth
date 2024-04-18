@@ -2,7 +2,11 @@ import logging
 
 import chromedriver_autoinstaller
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common.exceptions import (
+  NoSuchElementException,
+  TimeoutException,
+  WebDriverException,
+)
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -15,15 +19,21 @@ class StravaWebLoginFlow:
   LOGIN_BUTTON_ID = "login-button"
   AUTHORIZE_BUTTON_ID = "authorize"
 
-  def __init__(self, authorization_url: str, headless: bool = True, logger: logging.Logger | None = None):
+  def __init__(
+    self,
+    authorization_url: str,
+    headless: bool = True,
+    logger: logging.Logger | None = None,
+  ):
     self.authorization_url = authorization_url
     self.headless = headless
     self.logger = logger if logger else logging.getLogger(__name__)
 
   def login(self, email: str, password: str) -> str | None:
     """
-    Automatically input the athlete's email and password into Strava's web login form.
-    Copy the redirected authorization url that holds the 'code' and 'scope' query params.
+    Automatically input the athlete's email + password into Strava's web login
+    form. Copy the redirected authorization url that holds the 'code' and
+    'scope' query params.
 
     :return: The redirected authorization url
     """
@@ -57,7 +67,9 @@ class StravaWebLoginFlow:
 
       # Wait for new redirect page to load
       wait = WebDriverWait(driver, 5)  # wait 10 seconds before timing out
-      wait.until(EC.presence_of_element_located((By.ID, self.AUTHORIZE_BUTTON_ID)))
+      wait.until(
+        EC.presence_of_element_located((By.ID, self.AUTHORIZE_BUTTON_ID))
+      )
 
       # Click authorize
       self.logger.info("Submitting authorize form")
@@ -69,7 +81,9 @@ class StravaWebLoginFlow:
 
       # Copy the redirect authorization response url
       authorization_response_url = driver.current_url
-      self.logger.debug(f"Retrieved authorization response url: {authorization_response_url}")
+      self.logger.debug(
+        f"Retrieved authorization response url: {authorization_response_url}"
+      )
 
       self.logger.info("Succesfully logged in with Selenium")
 
